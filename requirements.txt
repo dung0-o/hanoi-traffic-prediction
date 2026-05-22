@@ -1,0 +1,24 @@
+# Data collection
+requests
+sqlalchemy
+psycopg2-binary
+holidays
+
+# Data processing
+pandas
+numpy
+
+# Modelling
+scikit-learn
+xgboost
+optuna
+
+# Visualisation
+matplotlib
+seaborn
+plotly
+
+# Dashboard
+streamlit
+folium
+streamlit-folium
