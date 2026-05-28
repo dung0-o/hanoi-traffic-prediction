@@ -9,14 +9,14 @@ This project collects real-time traffic data from TomTom API, stores it in a clo
 ## Key Results
 | Model	| R² | MAE |
 |-------|----|-----|
-| XGBoost (with recent history)	| 0.97 | 0.025 |
-| XGBoost (without recent history) | 0.67	| 0.045 |
+| XGBoost (with recent history)	| 0.98 | 0.019 |
+| XGBoost (without recent history) | 0.75	| 0.094 |
 
 ## Model Performance Analysis
 
 ### The High R²: Real but Context-Dependent
 
-The XGBoost model achieves R² = 0.97 on the test set. This is not due to data leakage, but it must be interpreted carefully.
+The XGBoost model achieves R² = 0.98 on the test set. This is not due to data leakage, but it must be interpreted carefully.
 
 **Why the high R² is legitimate:**
 - Rolling and lag features use only past observations within the same day
@@ -27,22 +27,22 @@ The XGBoost model achieves R² = 0.97 on the test set. This is not due to data l
 
 | Metric | Value | Implication |
 |--------|-------|-------------|
-| Overall congestion variance | 0.094 | Moderate spread across dataset |
-| Daily variance (mean) | 0.060 | Low variation within a single day |
-| Daily variance < 0.05 | 67.5% of days | Most days have very stable traffic |
-| Mean change (30 min) | 0.111 | Typical change is only 11% |
+| Overall congestion variance | 0.123 | Moderate spread across dataset |
+| Daily variance (mean) | 0.071 | Low variation within a single day |
+| Daily variance < 0.05 | 66.7% of days | Most days have very stable traffic |
+| Mean change (30 min) | 0.113 | Typical change is only 11% |
 | Median change (30 min) | 0.050 | Half the time, change is less than 5% |
 
-These statistics show that traffic in this dataset is inherently stable. When the target variable barely changes, any model that predicts "no change" will achieve high accuracy. The rolling mean feature (42% importance) essentially captures this stability.
+These statistics show that traffic in this dataset is inherently stable. When the target variable barely changes, any model that predicts "no change" will achieve high accuracy. The rolling mean feature (57.5% importance) essentially captures this stability.
 
-**What the 0.97 R² actually means:**
+**What the 0.98 R² actually means:**
 - The model is excellent at predicting next-30-minute congestion when recent history is available
 - This is genuinely useful for real-time navigation
 - It does NOT mean the model has discovered complex traffic patterns
 
-### The Genuine Prediction Power: R² = 0.67
+### The Genuine Prediction Power: R² = 0.75
 
-When rolling features are removed, the model must predict congestion using only:
+When rolling and lag features are removed, the model must predict congestion using only:
 - Time of day (hour, minute)
 - Day of week
 - Weather conditions
@@ -50,12 +50,7 @@ When rolling features are removed, the model must predict congestion using only:
 - Rush hour flags
 - Holiday indicators
 
-The resulting R² = 0.67 represents the model's true ability to predict congestion from contextual features alone, without relying on recent traffic history.
-
-| Prediction scenario | R² | Practical use |
-|--------------------|-----|----------------|
-| With recent history (30-min horizon) | 0.97 | Real-time navigation |
-| Without recent history | 0.67 | Trip planning hours in advance |
+The resulting R² = 0.75 represents the model's true ability to predict congestion from contextual features alone, without relying on recent traffic history.
 
 ### Why No Data Leakage
 
@@ -82,15 +77,15 @@ Each day starts fresh. No future data is used. The first two observations of eac
 ### Feature Importance
 | Feature | Importance |
 |---------|------------|
-| Rolling mean (90 min) | 42% |
-| Hour (sin) | 8.5% |
-| Lag 2 (60 min ago) | 6.1% |
-| Rush hour | 6.0% |
-| Lag 1 (30 min ago) | 5.9% |
+| Rolling mean (90 min) | 57.5% |
+| Lag 1 (30 min ago) | 5.5% |
+| Lag 2 (60 min ago) | 5.3% |
+| Rolling deviation (90 min) | 4.3% |
+| Hour (cos) | 2.8% |
 
-Without rolling features, hour becomes the most important feature (8.5%), followed by lag features (60 min ago) (6.1%). This confirms that time-based patterns are the primary signal when recent history is unavailable.
+Without recent history, rush hour becomes the most important feature (21%), followed by hour (14%). This confirms that time-based patterns are the primary signal when recent history is unavailable.
 
-#### Why Rolling Mean is the Top Feature (42% importance)
+#### Why Rolling Mean is the Top Feature (57.5% importance)
 
 The rolling mean of the last 3 observations (90 minutes) is the strongest predictor because:
 1. Traffic changes slowly; the average of recent history is highly stable
@@ -101,8 +96,8 @@ The rolling mean of the last 3 observations (90 minutes) is the strongest predic
 
 | Prediction task | R² | Useful for |
 |----------------|-----|-------------|
-| Next 30 minutes (with recent history) | 0.97 | Real-time traffic apps |
-| Long-horizon (without recent history) | 0.67 | Trip planning hours in advance |
+| Next 30 minutes (with recent history) | 0.98 | Real-time traffic apps |
+| Long-horizon (without recent history) | 0.75 | Trip planning hours in advance |
 
 ### What the Model Does NOT Predict Well
 
@@ -118,7 +113,7 @@ The rolling mean of the last 3 observations (90 minutes) is the strongest predic
 | API cost per day (TomTom) | $0 (free tier: 2,500 requests) |
 | Model retraining cost | < 1 minute |
 | Inference time per prediction | < 0.01 seconds |
-| Database storage (3,300 rows) | < 5 MB |
+| Database storage (10,000+ rows) | < 15 MB |
 
 The model is cheap enough to run in production for a small to medium user base.
 
@@ -154,16 +149,21 @@ Holidays ────┘
 ```
 hanoi-traffic-prediction/
 ├── sql/
-│   └── schema.sql  # Database schema
+│   └── schema.sql                      # Database schema
 ├── notebooks/
-│   ├── 01_data_collection.ipynb    # Collect traffic, weather, holidays
-│   └── 02_model_training.ipynb     # Feature engineering + XGBoost
+│   ├── 01_data_collection.ipynb        # Collect traffic, weather, holidays
+│   └── 02_model_training.ipynb         # Feature engineering + XGBoost + model export
 ├── app/
-│   ├── streamlit_app.py    # Interactive dashboard
+│   ├── streamlit_app.py                # Interactive dashboard
+│   ├── utils.py                        # Feature engineering helpers
 │   └── .streamlit/
-│       └── secrets.toml    # Local secrets (gitignored)
+│       └── secrets.toml                # Local secrets (gitignored)
+├── models/
+│   ├── traffic_model.pkl               # Trained XGBoost model
+│   ├── feature_columns.pkl             # Column order for inference
+│   └── model_metadata.pkl              # Version, R², MAE, params, date range
 ├── data/
-│   └── README.md   # Data source documentation
+│   └── README.md                       # Data source documentation
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -234,7 +234,7 @@ streamlit run streamlit_app.py
 ## Limitations
 - Traffic in this dataset is highly stable (low variance)
 
-- Only 3 days of data (6 AM - 7 PM)
+- Only 11 days of data (6 AM - 7 PM)
 
 - High autocorrelation inflates R² for short-term predictions
 
