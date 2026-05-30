@@ -2,6 +2,8 @@
 
 End-to-end pipeline for predicting traffic congestion in Hanoi using TomTom API, PostgreSQL, XGBoost, and Streamlit.
 
+The application is deployed and accessible online: [Hanoi Traffic Predictor](https://lhdang-hanoi-traffic-prediction.streamlit.app/)
+
 ## Project Overview
 
 This project collects real-time traffic data from TomTom API, stores it in a cloud PostgreSQL database (Supabase), trains an XGBoost model, and provides an interactive Streamlit dashboard for predictions.
@@ -119,7 +121,7 @@ The model is cheap enough to run in production for a small to medium user base.
 
 ## Frontend Dashboard Showcase
 
-The Streamlit dashboard provides an interactive interface for traffic prediction.
+The Streamlit dashboard provides an interactive interface for traffic prediction. The live version is deployed at [lhdang-hanoi-traffic-prediction.streamlit.app](https://lhdang-hanoi-traffic-prediction.streamlit.app/)
 
 ### Dashboard Features
 | Feature | Description |
@@ -246,6 +248,8 @@ streamlit run streamlit_app.py
 - **Modelling:** XGBoost, Optuna, scikit-learn
 
 - **Frontend:** Streamlit, Folium
+
+- **Deployment:** Streamlit Cloud, Git
 
 - **Environment:** Google Colab, Python 3.11
 
